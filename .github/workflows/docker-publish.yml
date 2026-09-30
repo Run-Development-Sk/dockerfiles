@@ -141,7 +141,7 @@ jobs:
           file: ${{ matrix.dockerfile }}
           platforms: ${{ matrix.platforms }}
           provenance: ${{ matrix.attest }}
-          sbom: ${{ matrix.attest }}
+          sbom: false
           push: true
           pull: true
           build-args: |
