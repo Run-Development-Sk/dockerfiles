@@ -135,6 +135,8 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
         python3-venv \
         # `jq` is like `grep`/`awk` but for JSON
         jq \
+        # `gettext` provides `msgcat`, `msgfmt`, `msgmerge` etc. to work with .po/.mo translation files
+        gettext \
     # Install wkhtmltopdf with patched Qt (architecture detected via `dpkg --print-architecture`)
     && apt-get install -y xfonts-base xfonts-75dpi \
     && ARCH="$(dpkg --print-architecture)" \
@@ -147,6 +149,18 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     # Clean up the package manager's local repository of retrieved package files
     # and remove the package lists that were downloaded earlier
     # to reduce the size of the final Docker image
+    && apt-get clean -y && rm -rf /var/lib/apt/lists/*
+
+# Install GitHub CLI `gh` from the official GitHub CLI apt repository
+# (see https://github.com/cli/cli/blob/trunk/docs/install_linux.md)
+RUN export DEBIAN_FRONTEND=noninteractive \
+    && mkdir -p -m 755 /etc/apt/keyrings \
+    && curl -fsSL -o /etc/apt/keyrings/githubcli-archive-keyring.gpg https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+    && chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+    && echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+        > /etc/apt/sources.list.d/github-cli.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends gh \
     && apt-get clean -y && rm -rf /var/lib/apt/lists/*
 
 # Enable Apache modules
