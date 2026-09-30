@@ -82,6 +82,11 @@ ENV IN_DOCKER=onLocalhost
 # Make the IN_DOCKER variable available in the Apache environment so in .htaccess like %{ENV:IN_DOCKER}
 RUN echo "export IN_DOCKER=$IN_DOCKER" >> /etc/apache2/envvars
 
+# Debian Bullseye reached end of LTS (2026-08-31): point apt sources to an archived version
+# of the Debian Bullseye repositories and drop bullseye-security, whose pool files are no longer available
+RUN sed -i 's/deb.debian.org/archive.debian.org/g' /etc/apt/sources.list \
+    && sed -i '/debian-security/d' /etc/apt/sources.list
+
 RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     # Install following additional linux packages:
     && apt-get install -y --no-install-recommends \

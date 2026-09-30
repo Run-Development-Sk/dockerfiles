@@ -70,8 +70,9 @@
 #
 # NOTE: If there is some missing <command> in this docker image then try `busybox <command>`.
 
-# php:8.3-apache-bullseye instead of php:8.0-apache because of wkhtmltopdf with patched Qt here below
-FROM php:8.3-apache-bullseye
+# php:8.3-apache-bookworm (Debian 12) because wkhtmltopdf with patched Qt here below is not available
+# for newer Debian releases and Debian Bullseye reached end of LTS (2026-08-31)
+FROM php:8.3-apache-bookworm
 # FROM php:8.2-apache
 
 # Use to check the actual version of image inside of container
@@ -145,7 +146,7 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     # Install wkhtmltopdf with patched Qt (architecture detected via `dpkg --print-architecture`)
     && apt-get install -y xfonts-base xfonts-75dpi \
     && ARCH="$(dpkg --print-architecture)" \
-    && curl -Lo /tmp/wkhtmltox.deb https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-2/wkhtmltox_0.12.6.1-2.bullseye_${ARCH}.deb \
+    && curl -Lo /tmp/wkhtmltox.deb https://github.com/wkhtmltopdf/packaging/releases/download/0.12.6.1-3/wkhtmltox_0.12.6.1-3.bookworm_${ARCH}.deb \
     && dpkg -i /tmp/wkhtmltox.deb \
     && apt-get -f install -y \
     && rm -rf /tmp/wkhtmltox.deb \
@@ -242,11 +243,15 @@ RUN chown -R developer:developer /var/www
 # Use the created user to run the container
 USER developer
 
+# NOTE: As we are in Docker container (where we control the entire environment), we can tell pip
+# it's okay to modify the system environment by passing the --break-system-packages option
+# (and so bypass/ignore/break https://peps.python.org/pep-0668/ enforced since Debian Bookworm)
+
 # Install pipx to install Python CLI tools in isolated environments
-RUN pip3 install pipx
+RUN pip3 install --break-system-packages pipx
 
 # Install uv, an extremely fast Python package and project manager
-RUN pip3 install uv
+RUN pip3 install --break-system-packages uv
 
 # Install nvm and Node.js 10 (Gitbook, Gulp), 17 (Gulp), 24 (Auggie)
 ENV NVM_DIR="/home/developer/.nvm"
