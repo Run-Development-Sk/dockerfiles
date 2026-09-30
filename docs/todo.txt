@@ -1,3 +1,5 @@
+- php kontajnery - pridaj msgcat nástroj
+- zváž inštalaciu `python3 -m playwright install --with-deps chromium` priamo v Dockerfiles - prípadne aj iné python requirements (`pre-commit`, ...)
 - `.github/workflows/docker-publish.yml`:
     - if `.github/workflows/docker-publish.yml` changes, let it trigger a build for all Dockerfiles (of course, except the excluded `.test` ones)
     - if `dev-odoo-entrypoint.sh` changes, let it trigger a build for all Dockerfiles that use this `.sh`
