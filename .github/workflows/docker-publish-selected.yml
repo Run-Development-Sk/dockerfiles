@@ -1,0 +1,20 @@
+name: Build and Push Selected Docker Images
+
+run-name: 'Build and push: ${{ inputs.dockerfiles }}'
+
+on:
+  workflow_dispatch:
+    inputs:
+      dockerfiles:
+        description: >-
+          Dockerfiles to build - space/comma-separated names (without the "images/Dockerfile." prefix),
+          <image>:<tag> references or glob patterns, e.g. "fajnlamp_8.3.amd64 dev-odoo:19.0-20260926 prod-odoo_*"
+        type: string
+        required: true
+
+jobs:
+  publish:
+    uses: ./.github/workflows/docker-publish.yml
+    with:
+      dockerfiles: ${{ inputs.dockerfiles }}
+    secrets: inherit

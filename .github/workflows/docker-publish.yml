@@ -13,6 +13,13 @@ on:
         description: 'Rebuild all Dockerfiles (ignore change detection)'
         type: boolean
         default: false
+  # Called by docker-publish-selected.yml to build an explicit list of Dockerfiles.
+  workflow_call:
+    inputs:
+      dockerfiles:
+        description: 'Space/comma-separated Dockerfile names or glob patterns'
+        type: string
+        required: true
 
 jobs:
   detect:
@@ -29,6 +36,9 @@ jobs:
         id: build-matrix
         env:
           FORCE_ALL: ${{ github.event_name == 'workflow_dispatch' && inputs.rebuild_all == true }}
+          # toJSON distinguishes a missing input (not called via workflow_call) from an empty one.
+          IS_SELECTION: ${{ toJSON(inputs.dockerfiles) != 'null' }}
+          SELECTED: ${{ inputs.dockerfiles }}
           EVENT_BEFORE: ${{ github.event.before }}
           HEAD_SHA: ${{ github.sha }}
         run: |
@@ -39,12 +49,49 @@ jobs:
             BASE=$(git rev-parse "${HEAD_SHA}^" 2>/dev/null || echo "")
           fi
 
-          if [[ "$FORCE_ALL" == "true" ]]; then
-            mapfile -t FILES < <(ls images/Dockerfile.* 2>/dev/null || true)
-          elif [[ -n "$BASE" ]]; then
-            mapfile -t FILES < <(git diff --name-only --diff-filter=AM "$BASE" "$HEAD_SHA" -- 'images/Dockerfile.*')
+          # MODE: selected (explicit list), all (every Dockerfile), changed (git diff).
+          if [[ "$IS_SELECTION" == "true" ]]; then
+            MODE="selected"
+            if [[ -z "${SELECTED//[[:space:],]/}" ]]; then
+              echo "::error::No Dockerfiles selected"
+              exit 1
+            fi
+          elif [[ "$FORCE_ALL" == "true" || -z "$BASE" ]]; then
+            MODE="all"
           else
+            MODE="changed"
+          fi
+
+          FILES=()
+          if [[ "$MODE" == "selected" ]]; then
+            # Each item may be a Dockerfile name with or without the "images/" and
+            # "Dockerfile." prefixes, an <image>:<tag> reference, or a glob pattern,
+            # e.g. "fajnlamp_8.3.amd64", "fajnlamp:8.3", "dev-odoo_19.0-*".
+            read -r -a PATTERNS <<< "${SELECTED//,/ }"
+            for p in "${PATTERNS[@]}"; do
+              p="${p#images/}"
+              p="${p#Dockerfile.}"
+              p="${p/:/_}"
+              if [[ ! "$p" =~ ^[A-Za-z0-9._*?-]+$ ]]; then
+                echo "::error::Invalid Dockerfile selector '$p'"
+                exit 1
+              fi
+              mapfile -t MATCHES < <(compgen -G "images/Dockerfile.$p" || true)
+              # Allow omitting the .amd64 suffix (e.g. "fajnlamp_8.3").
+              if [[ ${#MATCHES[@]} -eq 0 ]]; then
+                mapfile -t MATCHES < <(compgen -G "images/Dockerfile.$p.amd64" || true)
+              fi
+              if [[ ${#MATCHES[@]} -eq 0 ]]; then
+                echo "::error::Selector '$p' matches no images/Dockerfile.* file"
+                exit 1
+              fi
+              FILES+=("${MATCHES[@]}")
+            done
+            mapfile -t FILES < <(printf '%s\n' "${FILES[@]}" | sort -u)
+          elif [[ "$MODE" == "all" ]]; then
             mapfile -t FILES < <(ls images/Dockerfile.* 2>/dev/null || true)
+          else
+            mapfile -t FILES < <(git diff --name-only --diff-filter=AM "$BASE" "$HEAD_SHA" -- 'images/Dockerfile.*')
           fi
 
           INCLUDE='[]'
@@ -58,7 +105,7 @@ jobs:
             fi
 
             # For modified (not newly added) files check if changes are comments-only.
-            if [[ "$FORCE_ALL" != "true" && -n "$BASE" ]] && \
+            if [[ "$MODE" == "changed" ]] && \
                git cat-file -e "$BASE:$f" 2>/dev/null; then
               DIFF=$(git diff --no-color "$BASE" "$HEAD_SHA" -- "$f" \
                      | grep -E '^[+-]' \

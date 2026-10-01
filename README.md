@@ -12,6 +12,16 @@ Images are built and pushed to hub.docker.com automatically using github actions
 - A file whose tag ends with `.test` is not built.
 - A file that has the `.amd64` suffix after the tag is built only for `amd64`. This suffix is not counted as part of the tag, e.g., the file `Dockerfile.fajnlamp_7.3.amd64` is built into the image `fajnlamp:7.3`.
 
+On push to `main`, only the Dockerfiles changed by the push are built (comment/whitespace-only changes are skipped). Images can also be (re)built manually in *Actions*:
+
+- **Build and Push Docker Images** → *Run workflow*: without options it builds the Dockerfiles changed by the last commit; with *Rebuild all Dockerfiles* checked it builds all of them.
+- **Build and Push Selected Docker Images** (`.github/workflows/docker-publish-selected.yml`) → *Run workflow*: builds only the Dockerfiles listed in the input field, separated by spaces or commas. Each item may be:
+  - a file name with or without the `images/Dockerfile.` prefix, e.g. `fajnlamp_8.3.amd64`,
+  - an `<image_label>:<image_tag>` reference (the `.amd64` suffix may be omitted), e.g. `fajnlamp:8.3` or `dev-odoo:19.0-20260926`,
+  - a glob pattern, e.g. `prod-odoo_*` or `dev-odoo_19.0-*`.
+
+  An item that matches no file fails the run. `.test` variants are skipped even when selected. From the CLI: `gh workflow run docker-publish-selected.yml -f dockerfiles="fajnlamp:8.3 prod-odoo_*"`.
+
 ## Inital GitHub repository configuration
 
 For the workflow to log in to Docker Hub, the following must be configured in the GitHub repository under *Settings → Secrets and variables → Actions*:
