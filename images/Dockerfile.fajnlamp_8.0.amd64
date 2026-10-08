@@ -142,6 +142,9 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
         jq \
         # `gettext` provides `msgcat`, `msgfmt`, `msgmerge` etc. to work with .po/.mo translation files
         gettext \
+        # `nano` to serve as the default editor for git (via the Debian/Ubuntu `editor` alternative),
+        # e.g. when git automatically opens the merge commit message for editing
+        nano \
     # Install wkhtmltopdf with patched Qt (architecture detected via `dpkg --print-architecture`)
     && apt-get install -y xfonts-base xfonts-75dpi \
     && ARCH="$(dpkg --print-architecture)" \

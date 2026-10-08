@@ -139,6 +139,9 @@ RUN apt-get update -o Acquire::Check-Valid-Until=false && export DEBIAN_FRONTEND
         jq \
         # `gettext` provides `msgcat`, `msgfmt`, `msgmerge` etc. to work with .po/.mo translation files
         gettext \
+        # `nano` to serve as the default editor for git (via the Debian/Ubuntu `editor` alternative),
+        # e.g. when git automatically opens the merge commit message for editing
+        nano \
         # `apt-transport-https` is required by apt < 1.5 to use HTTPS repositories (GitHub CLI below)
         apt-transport-https \
     # Clean up the package manager's local repository of retrieved package files
